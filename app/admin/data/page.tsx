@@ -285,8 +285,8 @@ export default function DataManagementPage() {
         validateJson(formatted)
 
         toast({
-          title: "成功",
-          description: `已上传文件: ${file.name}`,
+          title: "已载入",
+          description: `文件 ${file.name} 已载入编辑器，请点击"保存数据"使其生效`,
         })
       } catch (error) {
         toast({

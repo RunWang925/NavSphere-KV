@@ -146,7 +146,14 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
                     {category.title}
                   </h2>
 
-                  {category.subCategories && category.subCategories.length > 0 ? (
+                  {category.items && category.items.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+                      {category.items.map((item) => (
+                        <NavigationCard key={item.id} item={item} siteConfig={siteData} />
+                      ))}
+                    </div>
+                  )}
+                  {category.subCategories && category.subCategories.length > 0 && (
                     <div className="space-y-8">
                       {category.subCategories.map((subCategory) => (
                         <div key={subCategory.id} id={subCategory.id} className="space-y-3">
@@ -159,12 +166,6 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
                             ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-                      {(category.items || []).map((item) => (
-                        <NavigationCard key={item.id} item={item} siteConfig={siteData} />
                       ))}
                     </div>
                   )}

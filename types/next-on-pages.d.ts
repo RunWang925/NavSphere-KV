@@ -9,3 +9,18 @@ declare module '@cloudflare/next-on-pages' {
     }
   }
 }
+interface CacheQueryOptions {
+  ignoreMethod?: boolean
+  ignoreSearch?: boolean
+  ignoreVary?: boolean
+}
+
+interface Cache {
+  match(request: RequestInfo | URL, options?: CacheQueryOptions): Promise<Response | undefined>
+  put(request: RequestInfo | URL, response: Response): Promise<void>
+  delete(request: RequestInfo | URL, options?: CacheQueryOptions): Promise<boolean>
+}
+
+declare var caches: {
+  readonly default: Cache
+}

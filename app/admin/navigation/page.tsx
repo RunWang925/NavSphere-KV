@@ -92,13 +92,23 @@ export default function NavigationPage() {
 
   const handleMoveToTop = async (id: string) => {
     try {
-      const response = await fetch(`/api/navigation/${id}/move-to-top`, {
-        method: 'POST'
+      const currentItems = Array.isArray(items) ? [...items] : []
+      const index = currentItems.findIndex(item => item.id === id)
+      if (index <= 0) return
+      const [movedItem] = currentItems.splice(index, 1)
+      currentItems.unshift(movedItem)
+
+      await mutate(currentItems, { revalidate: false })
+
+      const response = await fetch('/api/navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ navigationItems: currentItems })
       })
 
       if (!response.ok) throw new Error('Failed to move')
 
-      mutate()
+      await mutate()
       toast({
         title: "成功",
         description: "移动成功"
@@ -114,13 +124,23 @@ export default function NavigationPage() {
 
   const handleMoveToBottom = async (id: string) => {
     try {
-      const response = await fetch(`/api/navigation/${id}/move-to-bottom`, {
-        method: 'POST'
+      const currentItems = Array.isArray(items) ? [...items] : []
+      const index = currentItems.findIndex(item => item.id === id)
+      if (index < 0 || index >= currentItems.length - 1) return
+      const [movedItem] = currentItems.splice(index, 1)
+      currentItems.push(movedItem)
+
+      await mutate(currentItems, { revalidate: false })
+
+      const response = await fetch('/api/navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ navigationItems: currentItems })
       })
 
       if (!response.ok) throw new Error('Failed to move')
 
-      mutate()
+      await mutate()
       toast({
         title: "成功",
         description: "移动成功"
