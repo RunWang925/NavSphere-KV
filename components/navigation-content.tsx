@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import type { NavigationData } from '@/types/navigation'
-import type { SiteConfig } from '@/types/site'
+import type { SiteConfig, SearchEngine } from '@/types/site'
 import { NavigationCard } from '@/components/navigation-card'
 import { Sidebar } from '@/components/sidebar'
 import { SearchBar } from '@/components/search-bar'
@@ -16,28 +16,22 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [submittedQuery, setSubmittedQuery] = useState('')
 
-  /**
-   * 核心搜索分发逻辑
-   * @param query 搜索关键词
-   * @param type 'baidu' (全网搜索) 或 'site' (站内搜索)
-   */
-  const handleSearch = (query: string, type: 'baidu' | 'site') => {
+  const handleSearch = (query: string, engine: SearchEngine) => {
     const trimmed = query.trim()
     
-    // 如果输入内容为空，清空站内搜索状态
     if (!trimmed) {
       setSubmittedQuery('')
       return
     }
 
-    if (type === 'site') {
+    if (engine.isSite) {
       setSubmittedQuery(trimmed)
     } else {
-      window.open(`https://www.baidu.com/s?wd=${encodeURIComponent(trimmed)}`, '_blank')
+      const searchUrl = engine.url.replace('{q}', encodeURIComponent(trimmed))
+      window.open(searchUrl, '_blank')
     }
   }
 
-  // 搜索结果过滤逻辑
   const searchResults = useMemo(() => {
     const query = submittedQuery.toLowerCase().trim()
     if (!query) return []
@@ -63,14 +57,15 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
     return results
   }, [navigationData, submittedQuery])
 
+  const searchEngines = siteData.search?.engines || []
+  const defaultEngineId = siteData.search?.defaultEngineId || 'baidu'
+
   return (
     <div className="flex flex-col sm:flex-row min-h-screen bg-background">
-      {/* 桌面端侧边栏 */}
       <div className="hidden sm:block">
         <Sidebar navigationData={navigationData} siteInfo={siteData} className="sticky top-0 h-screen" />
       </div>
 
-      {/* 移动端侧边栏抽屉 */}
       <div className={cn(
         "fixed inset-0 z-50 bg-background/80 backdrop-blur-sm transition-all sm:hidden",
         isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -84,7 +79,6 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
       </div>
       
       <main className="flex-1 min-w-0">
-        {/* 顶部导航与搜索栏 */}
         <div className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30 px-4 sm:px-6 py-3 border-b">
           <div className="grid grid-cols-[auto_1fr_auto] sm:grid-cols-[1fr_2fr_1fr] items-center max-w-7xl mx-auto gap-4">
             
@@ -95,7 +89,7 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
             </div>
 
             <div className="flex justify-center w-full"> 
-              <SearchBar onSearch={handleSearch} searchQuery={submittedQuery} />
+              <SearchBar onSearch={handleSearch} searchQuery={submittedQuery} engines={searchEngines} defaultEngineId={defaultEngineId} />
             </div>
             
             <div className="flex items-center gap-1 justify-end">
@@ -115,10 +109,8 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
         </div>
 
         <div className="px-4 sm:px-8 py-6">
-          {/* 站内搜索结果区域 */}
           {submittedQuery && (
             <section className="mb-12">
-              {/* 核心修复：使用 &quot; 替换直接输入的双引号，解决腾讯云部署报错 */}
               <h2 className="text-base font-semibold text-foreground mb-4">
                 站内搜索结果: &quot;{submittedQuery}&quot;
               </h2>
@@ -137,10 +129,9 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
             </section>
           )}
 
-          {/* 默认分类导航展示列表：始终显示 */}
           <div className="space-y-10">
             {navigationData.navigationItems.map((category) => (
-              <section key={category.id} id={category.id} className="scroll-m-20">
+              <section key={category.id} id={category.id} className="scroll-mt-20">
                 <div className="space-y-4">
                   <h2 className="text-base font-semibold text-foreground">
                     {category.title}

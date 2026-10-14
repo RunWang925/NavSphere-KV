@@ -1,41 +1,67 @@
 'use client'
 
 import * as React from 'react'
-import { Search, LayoutGrid, X } from 'lucide-react'
+import { Search, LayoutGrid, X, ChevronDown, Check } from 'lucide-react'
 import { Input } from "@/registry/new-york/ui/input"
 import { Button } from "@/registry/new-york/ui/button"
+import type { SearchEngine } from '@/types/site'
 
-export function SearchBar({ onSearch, searchQuery }: { onSearch: (v: string, type: 'baidu' | 'site') => void, searchQuery: string }) {
+interface SearchBarProps {
+  onSearch: (query: string, engine: SearchEngine) => void
+  searchQuery: string
+  engines: SearchEngine[]
+  defaultEngineId: string
+}
+
+export function SearchBar({ onSearch, searchQuery, engines, defaultEngineId }: SearchBarProps) {
   const [inputValue, setInputValue] = React.useState(searchQuery)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const [dropdownOpen, setDropdownOpen] = React.useState(false)
+  const [iconError, setIconError] = React.useState(false)
+
+  const [selectedEngineId, setSelectedEngineId] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('search-engine-id')
+      if (saved && engines.find(e => e.id === saved)) return saved
+    }
+    return defaultEngineId
+  })
+
+  const selectedEngine = engines.find(e => e.id === selectedEngineId) || engines[0]
+  const siteEngine = engines.find(e => e.isSite)
+  const complementEngine = selectedEngine?.isSite
+    ? (engines.find(e => !e.isSite) || engines[0])
+    : (siteEngine || engines[0])
 
   React.useEffect(() => {
     setInputValue(searchQuery)
   }, [searchQuery])
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && selectedEngineId) {
+      localStorage.setItem('search-engine-id', selectedEngineId)
+    }
+  }, [selectedEngineId])
+
   const handleInputChange = (val: string) => {
     setInputValue(val)
-    if (val === '') {
-      onSearch('', 'site')
-    }
-  }
-
-  // 统一站内搜索触发
-  const triggerSiteSearch = () => {
-    if (inputValue.trim()) {
-      onSearch(inputValue, 'site')
+    if (val === '' && siteEngine) {
+      onSearch('', siteEngine)
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault()
       if (e.ctrlKey || e.metaKey) {
-        triggerSiteSearch()
+        if (inputValue.trim() && complementEngine) {
+          onSearch(inputValue, complementEngine)
+        }
       } else {
         if (inputValue.trim() === '') {
-          onSearch('', 'site')
-        } else {
-          onSearch(inputValue, 'baidu')
+          if (siteEngine) onSearch('', siteEngine)
+        } else if (selectedEngine) {
+          onSearch(inputValue, selectedEngine)
         }
       }
     }
@@ -43,26 +69,86 @@ export function SearchBar({ onSearch, searchQuery }: { onSearch: (v: string, typ
 
   const handleClear = () => {
     setInputValue('')
-    onSearch('', 'site')
+    if (siteEngine) onSearch('', siteEngine)
     inputRef.current?.focus()
   }
 
+  const placeholder = `输入关键词 (Enter ${selectedEngine?.name || ''} / Ctrl+Enter ${complementEngine?.name || ''})`
+
   return (
     <div className="relative group/bar w-full flex items-center max-w-2xl mx-auto">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-      
+      {/* 引擎选择器 */}
+      <div className="absolute left-1 top-1/2 -translate-y-1/2 z-10">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2 gap-1.5 hover:bg-muted rounded-md"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+        >
+          {selectedEngine?.isSite ? (
+            <LayoutGrid className="h-4 w-4 flex-shrink-0" />
+          ) : selectedEngine?.icon && !iconError ? (
+            <img
+              src={selectedEngine.icon}
+              alt=""
+              className="h-4 w-4 rounded-sm flex-shrink-0"
+              onError={() => setIconError(true)}
+            />
+          ) : (
+            <Search className="h-4 w-4 flex-shrink-0" />
+          )}
+          <span className="text-sm font-medium max-w-[50px] truncate">{selectedEngine?.name}</span>
+          <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+        </Button>
+
+        {dropdownOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+            <div className="absolute top-[calc(100%+4px)] left-0 z-50 bg-popover border border-border shadow-xl rounded-lg py-1 min-w-[160px]">
+              {engines.map((engine) => (
+                <button
+                  key={engine.id}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                  onClick={() => {
+                    setSelectedEngineId(engine.id)
+                    setDropdownOpen(false)
+                    setIconError(false)
+                    inputRef.current?.focus()
+                  }}
+                >
+                  {engine.isSite ? (
+                    <LayoutGrid className="h-4 w-4 flex-shrink-0" />
+                  ) : engine.icon ? (
+                    <img
+                      src={engine.icon}
+                      alt=""
+                      className="h-4 w-4 rounded-sm flex-shrink-0"
+                    />
+                  ) : (
+                    <Search className="h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span className="flex-1">{engine.name}</span>
+                  {engine.id === selectedEngineId && (
+                    <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       <Input
         ref={inputRef}
         type="text"
         value={inputValue}
         onChange={(e) => handleInputChange(e.target.value)}
-        placeholder="搜索本站卡片 (Enter 百度 / Ctrl+Enter 站内)"
+        placeholder={placeholder}
         onKeyDown={handleKeyDown}
-        className="w-full pl-10 pr-20 h-10 bg-background border-border focus-visible:ring-1 rounded-lg transition-all text-sm"
+        className="w-full pl-[100px] pr-20 h-10 bg-background border-border focus-visible:ring-1 rounded-lg transition-all text-sm"
       />
 
       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-        
         {inputValue && (
           <Button
             variant="ghost"
@@ -74,47 +160,18 @@ export function SearchBar({ onSearch, searchQuery }: { onSearch: (v: string, typ
           </Button>
         )}
 
-        {/* 提示容器：纯 CSS 驱动，位置锁定 */}
-        <div className="relative flex items-center group/tip">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-            onClick={triggerSiteSearch}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-
-          {/* 自动适配主题的提示框 */}
-          <div className="absolute top-[calc(100%+10px)] right-0 opacity-0 scale-95 pointer-events-none group-hover/tip:opacity-100 group-hover/tip:scale-100 transition-all duration-200 z-[100] origin-top-right">
-            {/* bg-popover 会在深色模式下变黑，在浅色模式下变白 */}
-            <div className="bg-popover border border-border shadow-2xl rounded-xl p-3 min-w-[150px] flex flex-col gap-2">
-              <div className="flex flex-col gap-1">
-                <span className="text-[12px] font-bold text-foreground leading-none">
-                  站内搜索
-                </span>
-                <span className="text-[10px] text-muted-foreground leading-none">
-                  点击图标 或 使用快捷键
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] bg-muted px-1.5 py-1 rounded border border-border text-muted-foreground font-bold leading-none">
-                    Ctrl
-                  </span>
-                  <span className="text-[9px] text-muted-foreground/40 font-bold">+</span>
-                  <span className="text-[9px] bg-muted px-1.5 py-1 rounded border border-border text-muted-foreground font-bold leading-none">
-                    Enter
-                  </span>
-                </div>
-              </div>
-
-              {/* 箭头装饰 */}
-              <div className="absolute -top-1 right-3 w-2 h-2 bg-popover border-t border-l border-border rotate-45" />
-            </div>
-          </div>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+          onClick={() => {
+            if (siteEngine && inputValue.trim()) {
+              onSearch(inputValue, siteEngine)
+            }
+          }}
+        >
+          <LayoutGrid className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   )

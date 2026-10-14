@@ -2,7 +2,7 @@
 
 export const runtime = 'edge'
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/registry/new-york/ui
 import { Icons } from "@/components/icons"
 import { Textarea } from "@/registry/new-york/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/registry/new-york/ui/select"
+import { Label } from "@/registry/new-york/ui/label"
 import {
   Form,
   FormControl,
@@ -24,7 +25,7 @@ import {
   FormMessage,
 } from "@/registry/new-york/ui/form"
 import { SiteConfigService} from "@/services/siteConfigService"
-import type { SiteConfig } from "@/types/site"
+import type { SiteConfig, SearchEngine } from "@/types/site"
 import { Toaster } from "@/registry/new-york/ui/toaster"
 
 const formSchema = z.object({
@@ -53,6 +54,10 @@ const formSchema = z.object({
 
 export default function SiteSettings() {
   const { toast } = useToast()
+  const [searchEngines, setSearchEngines] = useState<SearchEngine[]>([])
+  const [defaultEngineId, setDefaultEngineId] = useState('baidu')
+  const [savingSearch, setSavingSearch] = useState(false)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,6 +83,10 @@ export default function SiteSettings() {
       const config = await siteConfigService.getSiteConfig();
       if (config) {
         form.reset(config);
+        if (config.search) {
+          setSearchEngines(config.search.engines);
+          setDefaultEngineId(config.search.defaultEngineId);
+        }
       }
     }
     loadConfig()
@@ -100,6 +109,40 @@ export default function SiteSettings() {
     }
   }
 
+  async function saveSearchConfig() {
+    try {
+      setSavingSearch(true)
+      const siteConfigService = new SiteConfigService();
+      const currentConfig = await siteConfigService.getSiteConfig();
+      await siteConfigService.updateSiteConfig({
+        ...currentConfig,
+        search: { engines: searchEngines, defaultEngineId }
+      });
+      toast({ title: "成功", description: "搜索设置已保存" });
+    } catch {
+      toast({ title: "错误", description: "保存失败", variant: "destructive" });
+    } finally {
+      setSavingSearch(false)
+    }
+  }
+
+  function addEngine() {
+    setSearchEngines([...searchEngines, {
+      id: `custom-${Date.now()}`,
+      name: '新引擎',
+      url: 'https://',
+      icon: ''
+    }]);
+  }
+
+  function deleteEngine(id: string) {
+    setSearchEngines(searchEngines.filter(e => e.id !== id));
+  }
+
+  function updateEngine(id: string, field: keyof SearchEngine, value: string) {
+    setSearchEngines(searchEngines.map(e => e.id === id ? { ...e, [field]: value } : e));
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -108,6 +151,7 @@ export default function SiteSettings() {
             <TabsTrigger value="basic">基本信息</TabsTrigger>
             <TabsTrigger value="appearance">外观设置</TabsTrigger>
             <TabsTrigger value="navigation">导航设置</TabsTrigger>
+            <TabsTrigger value="search">搜索设置</TabsTrigger>
           </TabsList>
           <TabsContent value="basic">
             <Card>
@@ -313,9 +357,81 @@ export default function SiteSettings() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="search">
+            <Card>
+              <CardHeader>
+                <CardTitle>搜索设置</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label>默认搜索引擎（回车触发）</Label>
+                    <Select value={defaultEngineId} onValueChange={setDefaultEngineId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择默认搜索引擎" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {searchEngines.map(engine => (
+                          <SelectItem key={engine.id} value={engine.id}>{engine.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      回车使用此引擎搜索，Ctrl+回车自动使用互补引擎（站内↔搜索引擎）
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>搜索引擎列表</Label>
+                      <Button variant="outline" size="sm" onClick={addEngine}>+ 添加</Button>
+                    </div>
+                    
+                    {searchEngines.map((engine) => (
+                      <div key={engine.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{engine.name}</span>
+                          {engine.isSite ? (
+                            <span className="text-xs text-muted-foreground">站内搜索（不可删除）</span>
+                          ) : (
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteEngine(engine.id)}>删除</Button>
+                          )}
+                        </div>
+                        {!engine.isSite && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <Input
+                              value={engine.name}
+                              placeholder="名称"
+                              onChange={(e) => updateEngine(engine.id, 'name', e.target.value)}
+                            />
+                            <Input
+                              value={engine.url}
+                              placeholder="搜索URL（用 {q} 占位）"
+                              onChange={(e) => updateEngine(engine.id, 'url', e.target.value)}
+                            />
+                            <Input
+                              value={engine.icon || ''}
+                              placeholder="图标URL（可选）"
+                              onChange={(e) => updateEngine(engine.id, 'icon', e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-start">
+                    <Button onClick={saveSearchConfig} disabled={savingSearch} className="w-[120px]">
+                      {savingSearch ? "保存中" : "保存设置"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
       <Toaster />
     </>
   )
-} 
+}
