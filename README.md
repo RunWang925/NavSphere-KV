@@ -2,9 +2,9 @@
 
 一个自托管导航站，数据存在 Cloudflare KV，改数据不用重新部署，fork 即用。
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/RunWang925/NavSphere-KV)
-
-> 点击按钮一键部署到 Cloudflare（fork 本仓库后，把链接里的 `RunWang925` 换成你的 GitHub 用户名）。
+> **部署到 Cloudflare Pages**：fork 本仓库 → Cloudflare Dashboard → Workers & Pages → 创建应用程序 → **Pages** → 连接到 Git → 选这个仓库
+>
+> 构建命令 `npx @cloudflare/next-on-pages@1`，输出目录 `.vercel/output/static`，详细步骤见 [DEPLOY.md](./DEPLOY.md)
 
 ---
 
