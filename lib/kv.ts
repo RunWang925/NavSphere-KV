@@ -31,6 +31,9 @@ export async function saveNavigation(data: NavigationData): Promise<void> {
     await env.NAV_KV.put(KV_KEY, JSON.stringify(data))
     return
   }
+  if (process.env.CF_PAGES === '1') {
+    throw new Error('KV 未绑定，无法保存。请在 Cloudflare Dashboard → Settings → Functions → KV 绑定变量名 NAV_KV')
+  }
   console.warn('[local] KV 不可用，数据未持久化（本地开发模式）')
 }
 
@@ -62,6 +65,9 @@ export async function saveSite(data: any): Promise<void> {
     await env.NAV_KV.put('site', JSON.stringify(data))
     return
   }
+  if (process.env.CF_PAGES === '1') {
+    throw new Error('KV 未绑定，无法保存。请绑定 NAV_KV')
+  }
   console.warn('[local] KV 不可用，site 数据未持久化')
 }
 import resourceFallback from '@/navsphere/content/resource-metadata.json'
@@ -82,6 +88,9 @@ export async function saveResource(data: any): Promise<void> {
   if (env?.NAV_KV) {
     await env.NAV_KV.put('resource', JSON.stringify(data))
     return
+  }
+  if (process.env.CF_PAGES === '1') {
+    throw new Error('KV 未绑定，无法保存。请绑定 NAV_KV')
   }
   console.warn('[local] KV 不可用，resource 数据未持久化')
 }
