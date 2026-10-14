@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -94,6 +94,13 @@ export function AdminLayoutClient({ children, user }: AdminLayoutClientProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   const { setTheme } = useTheme()
+  const [kvAvailable, setKvAvailable] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    fetch('/api/system/status').then(res => res.json()).then(data => {
+      setKvAvailable(data.kvAvailable)
+    }).catch(() => {})
+  }, [])
 
   const toggleMenuItem = (href: string) => {
     setExpandedItems(prev =>
@@ -333,6 +340,14 @@ export function AdminLayoutClient({ children, user }: AdminLayoutClientProps) {
             <main className="relative lg:pl-[80px] xl:pl-0 h-full">
               <div className="h-full overflow-auto">
                 <div className="p-6">
+                  {kvAvailable === false && (
+                    <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                      <p className="font-semibold">⚠️ KV 未绑定，所有修改不会生效</p>
+                      <p className="mt-1">
+                        请去 Cloudflare Dashboard → Settings → Functions → KV namespace bindings 绑定变量名 <code className="font-mono font-bold">NAV_KV</code> 后重新部署。
+                      </p>
+                    </div>
+                  )}
                   {children}
                 </div>
               </div>
