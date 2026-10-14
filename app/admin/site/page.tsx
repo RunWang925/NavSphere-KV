@@ -95,7 +95,10 @@ export default function SiteSettings() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       const siteConfigService = new SiteConfigService();
-      await siteConfigService.updateSiteConfig(values);
+      await siteConfigService.updateSiteConfig({
+        ...values,
+        search: { engines: searchEngines, defaultEngineId }
+      });
       toast({
         title: "成功",
         description: "站点信息已保存",
