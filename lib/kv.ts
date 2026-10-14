@@ -19,8 +19,10 @@ export async function getEnv(): Promise<any | null> {
 
 async function getFromCache(key: string): Promise<any | null> {
   try {
-    if (typeof caches === 'undefined') return null
-    const cache = caches.default
+    const g = globalThis as any
+    if (!g.caches) return null
+    const cache = g.caches.default
+    if (!cache) return null
     const response = await cache.match(`https://navsphere.local/${key}`)
     if (response) {
       return await response.json()
@@ -31,8 +33,10 @@ async function getFromCache(key: string): Promise<any | null> {
 
 async function putToCache(key: string, data: any): Promise<void> {
   try {
-    if (typeof caches === 'undefined') return
-    const cache = caches.default
+    const g = globalThis as any
+    if (!g.caches) return
+    const cache = g.caches.default
+    if (!cache) return
     const response = new Response(JSON.stringify(data), {
       headers: {
         'Content-Type': 'application/json',
@@ -45,8 +49,10 @@ async function putToCache(key: string, data: any): Promise<void> {
 
 export async function clearNavCache(): Promise<void> {
   try {
-    if (typeof caches === 'undefined') return
-    const cache = caches.default
+    const g = globalThis as any
+    if (!g.caches) return
+    const cache = g.caches.default
+    if (!cache) return
     await cache.delete('https://navsphere.local/navigation')
     await cache.delete('https://navsphere.local/site')
   } catch {}
