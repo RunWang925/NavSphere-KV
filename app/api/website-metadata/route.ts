@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { saveAsset } from '@/lib/asset-storage'
 
 export const runtime = 'edge'
 
@@ -25,33 +24,15 @@ export async function POST(request: Request) {
 
         const metadata = await fetchWebsiteMetadata(url)
 
-        // 确保 metadata 对象包含所有必需的属性
         if (!metadata || typeof metadata !== 'object') {
             throw new Error('Failed to fetch valid metadata')
         }
 
-        // 如果获取到了 favicon，下载并存入 KV/R2
-        if (metadata.icon) {
+        if (!metadata.icon) {
             try {
-                const iconUrl = await downloadAndStoreIcon(metadata.icon)
-                metadata.icon = iconUrl
-
-            } catch (error) {
-                console.warn('Failed to download icon:', error)
-                // ======================== 已修改 ========================
-                // 原来逻辑：下载失败 → 使用谷歌图标
-                // 现在逻辑：下载失败 → 直接使用 favicon.im（国内可用）
-                // 不再调用谷歌接口，彻底解决国内无法访问问题
-                // ======================================================
-                try {
-                    const domain = new URL(url).hostname
-                    // 使用 favicon.im 替代谷歌，国内可直接访问
-                    const fallbackIconUrl = `https://favicon.im/${domain}?larger=true`
-                    metadata.icon = fallbackIconUrl
-                } catch (fallbackError) {
-                    console.warn('使用 favicon.im 兜底失败:', fallbackError)
-                }
-            }
+                const domain = new URL(url).hostname
+                metadata.icon = `https://favicon.im/${domain}?larger=true`
+            } catch {}
         }
 
         return NextResponse.json(metadata)
@@ -132,10 +113,6 @@ function getFallbackMetadata(url: string): WebsiteMetadata {
         return {
             title: capitalizedTitle,
             description: `访问 ${hostname}`,
-            // ======================== 已修改 ========================
-            // 原来：谷歌图标接口（国内无法访问）
-            // 现在：favicon.im 国内可用高清图标接口
-            // ======================================================
             icon: `https://favicon.im/${hostname}?larger=true`
         }
     } catch {
@@ -218,61 +195,5 @@ function extractFavicon(html: string, baseUrl: string): string | null {
         }
     }
 
-    // ======================== 已修改 ========================
-    // 原来：没找到图标 → 使用谷歌
-    // 现在：没找到图标 → 使用 favicon.im（国内可用）
-    // ======================================================
     return `https://favicon.im/${base.hostname}?larger=true`
-}
-
-// ======================== 已注释/废弃 ========================
-// 原来的谷歌下载函数，现在已经完全不用了
-// 因为全部替换成了 favicon.im，国内可直接访问
-// ============================================================
-// async function downloadGoogleFavicon(domain: string, token: string): Promise<string> {
-//     ... 谷歌代码已废弃 ...
-// }
-
-async function downloadAndStoreIcon(iconUrl: string): Promise<string> {
-    const response = await fetch(iconUrl, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
-            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
-            'Referer': new URL(iconUrl).origin + '/',
-            'Sec-Ch-Ua': '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"macOS"',
-            'Sec-Fetch-Dest': 'image',
-            'Sec-Fetch-Mode': 'no-cors',
-            'Sec-Fetch-Site': 'same-origin'
-        },
-        redirect: 'follow',
-        signal: AbortSignal.timeout(15000)
-    })
-
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const arrayBuffer = await response.arrayBuffer()
-    const binaryData = new Uint8Array(arrayBuffer)
-    const ext = getFileExtension(iconUrl)
-    const { url } = await saveAsset(binaryData, ext)
-    return url
-}
-
-function getFileExtension(url: string): string {
-    try {
-        const pathname = new URL(url).pathname
-        const extension = pathname.split('.').pop()?.toLowerCase()
-
-        if (extension && ['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'].includes(extension)) {
-            return extension
-        }
-        return 'png'
-    } catch {
-        return 'png'
-    }
 }

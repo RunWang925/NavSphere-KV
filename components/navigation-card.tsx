@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/registry/new-york/ui/card'
 import type { NavigationSubItem } from '@/types/navigation'
@@ -14,18 +15,18 @@ import {
 interface NavigationCardProps {
   item: NavigationSubItem
   siteConfig?: SiteConfig
-  searchQuery?: string // 新增：接收搜索词
+  searchQuery?: string
 }
 
 export function NavigationCard({ item, siteConfig, searchQuery }: NavigationCardProps) {
-  // 渲染高亮文本并智能处理描述截断
+  const [iconError, setIconError] = useState(false)
+
   const renderHighlightText = (text: string, query: string, isDescription = false) => {
     if (!query || !text) return text
     
     const lowerText = text.toLowerCase()
     const lowerQuery = query.toLowerCase()
     
-    // 如果是描述文字，且关键词不在开头，进行智能智能定位
     let displayText = text
     if (isDescription && !lowerText.startsWith(lowerQuery) && lowerText.includes(lowerQuery)) {
       const index = lowerText.indexOf(lowerQuery)
@@ -64,15 +65,20 @@ export function NavigationCard({ item, siteConfig, searchQuery }: NavigationCard
             >
               <CardHeader className="p-4 sm:p-5">
                 <div className="flex items-start gap-3">
-                  {item.icon && (
+                  {item.icon && !iconError ? (
                     <div className="flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-md overflow-hidden bg-muted flex items-center justify-center">
                       <img
                         src={item.icon}
                         alt=""
                         className="w-full h-full object-contain"
+                        onError={() => setIconError(true)}
                       />
                     </div>
-                  )}
+                  ) : item.icon ? (
+                    <div className="flex-shrink-0 w-9 h-9 sm:w-11 sm:h-11 rounded-md bg-muted/50 flex items-center justify-center text-[10px] text-muted-foreground">
+                      丢失
+                    </div>
+                  ) : null}
                   <div className="space-y-1 min-w-0">
                     <CardTitle className="text-sm sm:text-base truncate">
                       {renderHighlightText(item.title, searchQuery || '')}

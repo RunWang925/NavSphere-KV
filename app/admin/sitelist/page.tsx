@@ -1166,7 +1166,12 @@ export default function SiteListPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="icon">站点图标</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="icon">站点图标</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {newSite.icon ? (newSite.icon.startsWith('http') ? '🔗 外链' : '📦 本地上传') : '未设置'}
+                      </span>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <div className="flex-1 relative">
                         <Input
@@ -1367,7 +1372,12 @@ export default function SiteListPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="edit-icon">站点图标</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="edit-icon">站点图标</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {editSite.icon ? (editSite.icon.startsWith('http') ? '🔗 外链' : '📦 本地上传') : '未设置'}
+                      </span>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <div className="flex-1 relative">
                         <Input
