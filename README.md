@@ -2,9 +2,9 @@
 
 一个自托管导航站，数据存在 Cloudflare KV，改数据不用重新部署，fork 即用。
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/your-username/NavSphere-KV)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/RunWang925/NavSphere-KV)
 
-> 点击按钮一键部署到 Cloudflare（需先 fork 本仓库到你自己的 GitHub，并把上面链接里的 `your-username` 换成你的 GitHub 用户名）。
+> 点击按钮一键部署到 Cloudflare（fork 本仓库后，把链接里的 `RunWang925` 换成你的 GitHub 用户名）。
 
 ---
 
