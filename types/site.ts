@@ -20,7 +20,7 @@ export interface SiteConfig {
   navigation: {
     linkTarget: '_blank' | '_self'
   }
-  search: {
+  search?: {
     engines: SearchEngine[]
     defaultEngineId: string
   }
@@ -40,7 +40,7 @@ export interface SiteInfo {
   navigation: {
     linkTarget: string
   }
-  search: {
+  search?: {
     engines: SearchEngine[]
     defaultEngineId: string
   }
