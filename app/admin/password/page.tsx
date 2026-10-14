@@ -1,5 +1,7 @@
 'use client'
 
+export const runtime = 'edge'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/registry/new-york/ui/button"
