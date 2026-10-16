@@ -3,6 +3,7 @@ import { Metadata } from 'next/types'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { Container } from '@/components/ui/container'
 import type { SiteConfig } from '@/types/site'
+import type { NavigationData } from '@/types/navigation'
 import { getNavigationCached, getSiteCached } from '@/lib/kv'
 import navigationFallback from '@/navsphere/content/navigation.json'
 import siteFallback from '@/navsphere/content/site.json'
@@ -11,7 +12,10 @@ export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 async function getData() {
-  const navigationData = await getNavigationCached()
+  let navigationData = await getNavigationCached()
+  if (!navigationData?.navigationItems || navigationData.navigationItems.length === 0) {
+    navigationData = navigationFallback as NavigationData
+  }
   const siteDataRaw: any = (await getSiteCached()) || siteFallback
 
   const siteData: SiteConfig = {
