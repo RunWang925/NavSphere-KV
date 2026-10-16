@@ -16,6 +16,7 @@ async function getData() {
 
   const siteData: SiteConfig = {
     ...siteDataRaw,
+    search: siteDataRaw.search || siteFallback.search,
     appearance: {
       ...siteDataRaw.appearance,
       theme: (siteDataRaw.appearance.theme === 'light' ||
