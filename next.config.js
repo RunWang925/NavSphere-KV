@@ -34,7 +34,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost', 'newkit.site']
     },
-    optimizePackageImports: ['lucide-react', 'date-fns', 'lodash']
+    optimizePackageImports: ['lucide-react', 'date-fns']
   }
 }
 

@@ -27,6 +27,8 @@ import {
 import { SiteConfigService} from "@/services/siteConfigService"
 import type { SiteConfig, SearchEngine } from "@/types/site"
 import { Toaster } from "@/registry/new-york/ui/toaster"
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
+import { GripVertical, Lock } from 'lucide-react'
 
 const formSchema = z.object({
   basic: z.object({
@@ -83,10 +85,16 @@ export default function SiteSettings() {
       const config = await siteConfigService.getSiteConfig();
       if (config) {
         form.reset(config);
-        if (config.search) {
-          setSearchEngines(config.search.engines);
-          setDefaultEngineId(config.search.defaultEngineId);
+        let engines = config.search?.engines || []
+        if (engines.length === 0 || !engines.some(e => e.isSite)) {
+          engines = [{ id: 'site', name: '站内', url: '', isSite: true, icon: config.appearance?.favicon || '' }]
         }
+        let defaultId = config.search?.defaultEngineId
+        if (!defaultId || !engines.some(e => e.id === defaultId)) {
+          defaultId = engines.find(e => e.isSite)?.id || engines[0]?.id || ''
+        }
+        setSearchEngines(engines);
+        setDefaultEngineId(defaultId);
       }
     }
     loadConfig()
@@ -115,11 +123,19 @@ export default function SiteSettings() {
   async function saveSearchConfig() {
     try {
       setSavingSearch(true)
+      const safeEngines = searchEngines.length > 0
+        ? searchEngines
+        : [{ id: 'site', name: '站内', url: '', isSite: true } as SearchEngine]
+      const safeDefaultId = safeEngines.some(e => e.id === defaultEngineId)
+        ? defaultEngineId
+        : (safeEngines.find(e => e.isSite)?.id || safeEngines[0]?.id || '')
+      setSearchEngines(safeEngines)
+      setDefaultEngineId(safeDefaultId)
       const siteConfigService = new SiteConfigService();
       const currentConfig = await siteConfigService.getSiteConfig();
       await siteConfigService.updateSiteConfig({
         ...currentConfig,
-        search: { engines: searchEngines, defaultEngineId }
+        search: { engines: safeEngines, defaultEngineId: safeDefaultId }
       });
       toast({ title: "成功", description: "搜索设置已保存" });
     } catch {
@@ -139,11 +155,27 @@ export default function SiteSettings() {
   }
 
   function deleteEngine(id: string) {
-    setSearchEngines(searchEngines.filter(e => e.id !== id));
+    const remaining = searchEngines.filter(e => e.id !== id)
+    setSearchEngines(remaining)
+    if (defaultEngineId === id) {
+      const next = remaining[0]?.id || ''
+      setDefaultEngineId(next)
+    }
   }
 
   function updateEngine(id: string, field: keyof SearchEngine, value: string) {
     setSearchEngines(searchEngines.map(e => e.id === id ? { ...e, [field]: value } : e));
+  }
+
+  function onEngineDragEnd(result: DropResult) {
+    if (!result.destination) return
+    const items = Array.from(searchEngines)
+    const [removed] = items.splice(result.source.index, 1)
+    items.splice(result.destination.index, 0, removed)
+    setSearchEngines(items)
+    if (defaultEngineId === removed.id) {
+      setDefaultEngineId(removed.id)
+    }
   }
 
   return (
@@ -386,41 +418,77 @@ export default function SiteSettings() {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label>搜索引擎列表</Label>
+                      <Label>搜索引擎列表（拖动排序）</Label>
                       <Button variant="outline" size="sm" onClick={addEngine}>+ 添加</Button>
                     </div>
-                    
-                    {searchEngines.map((engine) => (
-                      <div key={engine.id} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{engine.name}</span>
-                          {engine.isSite ? (
-                            <span className="text-xs text-muted-foreground">站内搜索（不可删除）</span>
-                          ) : (
-                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteEngine(engine.id)}>删除</Button>
-                          )}
-                        </div>
-                        {!engine.isSite && (
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <Input
-                              value={engine.name}
-                              placeholder="名称"
-                              onChange={(e) => updateEngine(engine.id, 'name', e.target.value)}
-                            />
-                            <Input
-                              value={engine.url}
-                              placeholder="搜索URL（用 {q} 占位）"
-                              onChange={(e) => updateEngine(engine.id, 'url', e.target.value)}
-                            />
-                            <Input
-                              value={engine.icon || ''}
-                              placeholder="图标URL（可选）"
-                              onChange={(e) => updateEngine(engine.id, 'icon', e.target.value)}
-                            />
-                          </div>
-                        )}
+                    {searchEngines.length === 0 ? (
+                      <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+                        暂无搜索引擎，至少需要保留「站内」搜索
                       </div>
-                    ))}
+                    ) : (
+                      <DragDropContext onDragEnd={onEngineDragEnd}>
+                        <Droppable droppableId="search-engines">
+                          {(provided) => (
+                            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                              {searchEngines.map((engine, index) => (
+                                <Draggable key={engine.id} draggableId={engine.id} index={index}>
+                                  {(provided) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className="border rounded-lg p-3 bg-background"
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            {...provided.dragHandleProps}
+                                            className="cursor-grab text-muted-foreground hover:text-foreground transition-colors"
+                                            title="拖动排序"
+                                          >
+                                            <GripVertical className="h-4 w-4" />
+                                          </button>
+                                          <span className="text-sm font-medium">{engine.name}</span>
+                                        </div>
+                                        {engine.isSite ? (
+                                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <Lock className="h-3 w-3" /> 站内搜索（不可删除）
+                                          </span>
+                                        ) : (
+                                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteEngine(engine.id)}>删除</Button>
+                                        )}
+                                      </div>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <Input
+                                          value={engine.name}
+                                          placeholder="名称"
+                                          disabled={engine.isSite}
+                                          onChange={(e) => updateEngine(engine.id, 'name', e.target.value)}
+                                        />
+                                        {engine.isSite ? (
+                                          <Input value="站内搜索" placeholder="" disabled className="text-muted-foreground" />
+                                        ) : (
+                                          <Input
+                                            value={engine.url}
+                                            placeholder="搜索URL（用 {q} 占位）"
+                                            onChange={(e) => updateEngine(engine.id, 'url', e.target.value)}
+                                          />
+                                        )}
+                                        <Input
+                                          value={engine.icon || ''}
+                                          placeholder={engine.isSite ? "站点图标URL（推荐用 favicon.im）" : "图标URL（可选）"}
+                                          onChange={(e) => updateEngine(engine.id, 'icon', e.target.value)}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
+                    )}
                   </div>
 
                   <div className="flex justify-start">

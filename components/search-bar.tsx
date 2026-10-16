@@ -73,7 +73,7 @@ export function SearchBar({ onSearch, searchQuery, engines, defaultEngineId }: S
     inputRef.current?.focus()
   }
 
-  const placeholder = `输入关键词 (Enter ${selectedEngine?.name || ''} / Ctrl+Enter ${complementEngine?.name || ''})`
+  const placeholder = `输入关键词，回车或点击右侧搜索（${selectedEngine?.name || ''}）· Ctrl+回车${complementEngine?.name || ''}`
 
   return (
     <div className="relative group/bar w-full flex items-center max-w-2xl mx-auto">
@@ -145,6 +145,7 @@ export function SearchBar({ onSearch, searchQuery, engines, defaultEngineId }: S
         onChange={(e) => handleInputChange(e.target.value)}
         placeholder={placeholder}
         onKeyDown={handleKeyDown}
+        spellCheck={false}
         className="w-full pl-[100px] pr-20 h-10 bg-background border-border focus-visible:ring-1 rounded-lg transition-all text-sm"
       />
 
@@ -163,14 +164,15 @@ export function SearchBar({ onSearch, searchQuery, engines, defaultEngineId }: S
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+          className="h-8 w-8 hover:bg-muted text-foreground hover:text-primary transition-colors"
           onClick={() => {
-            if (siteEngine && inputValue.trim()) {
-              onSearch(inputValue, siteEngine)
+            if (selectedEngine && inputValue.trim()) {
+              onSearch(inputValue, selectedEngine)
             }
           }}
+          title="搜索"
         >
-          <LayoutGrid className="h-4 w-4" />
+          <Search className="h-4 w-4" />
         </Button>
       </div>
     </div>

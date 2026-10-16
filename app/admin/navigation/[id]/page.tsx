@@ -68,11 +68,11 @@ export default function NavigationPage() {
   }
 
   const handleItemsManage = (itemId: string) => {
-    router.push(`/admin/navigation/${params!.id}/items/${itemId}`)
+    router.push(`/admin/navigation/${params!.id}/items?itemId=${itemId}`)
   }
 
   const handleCategoryManage = (itemId: string) => {
-    router.push(`/admin/navigation/${params!.id}/categories/${itemId}`)
+    router.push(`/admin/navigation/${params!.id}/categories?itemId=${itemId}`)
   }
 
   const handleEdit = async (item: NavigationItem) => {

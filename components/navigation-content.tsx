@@ -12,6 +12,15 @@ import { cn } from '@/lib/utils'
 import { Github, HelpCircle, Menu } from 'lucide-react'
 import { Button } from "@/registry/new-york/ui/button"
 
+function buildSearchUrl(engineUrl: string, query: string): string {
+  const encoded = encodeURIComponent(query)
+  if (engineUrl.includes('{q}')) {
+    return engineUrl.split('{q}').join(encoded)
+  }
+  const separator = engineUrl.includes('?') ? '&' : '?'
+  return `${engineUrl}${separator}q=${encoded}`
+}
+
 export function NavigationContent({ navigationData, siteData }: { navigationData: NavigationData, siteData: SiteConfig }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [submittedQuery, setSubmittedQuery] = useState('')
@@ -27,8 +36,8 @@ export function NavigationContent({ navigationData, siteData }: { navigationData
     if (engine.isSite) {
       setSubmittedQuery(trimmed)
     } else {
-      const searchUrl = engine.url.replace('{q}', encodeURIComponent(trimmed))
-      window.open(searchUrl, '_blank')
+      const searchUrl = buildSearchUrl(engine.url, trimmed)
+      window.open(searchUrl, '_blank', 'noopener,noreferrer')
     }
   }
 

@@ -37,7 +37,7 @@ async function validateAndSaveNavigationData(data: any) {
   await saveNavigation(data as NavigationData)
 }
 
-export async function POST(request: Request) {
+async function handleSave(request: Request) {
   try {
     const session = await auth()
     if (!session?.user) {
@@ -55,20 +55,10 @@ export async function POST(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  return handleSave(request)
+}
+
 export async function PUT(request: Request) {
-  try {
-    const session = await auth()
-    if (!session?.user) {
-      return new Response('Unauthorized', { status: 401 })
-    }
-    const data = await request.json()
-    await validateAndSaveNavigationData(data)
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Failed to update navigation data:', error)
-    return NextResponse.json(
-      { error: 'Failed to update navigation data', details: (error as Error).message },
-      { status: 500 }
-    )
-  }
+  return handleSave(request)
 }

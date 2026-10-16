@@ -479,7 +479,7 @@ export default function SiteListPage() {
       }
 
       const newItem: NavigationSubItem = {
-        id: `site_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `site_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         title: newSite.name,
         href: newSite.url,
         description: newSite.description,
